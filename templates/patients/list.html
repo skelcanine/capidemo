@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Patient Management — CapillaryMD{% endblock %}
+
+{% block content %}
+<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <div class="breadcrumb">
+            <a href="{{ url_for('capillaroscopy.dashboard') }}">Home</a> / <span>Patients</span>
+        </div>
+        <h1 style="font-size: 2rem; font-weight: 800; color: var(--text-main); margin-top: 0.2rem;">
+            Patient Directory
+        </h1>
+    </div>
+
+    <button onclick="document.getElementById('newPatientModal').style.display = (document.getElementById('newPatientModal').style.display === 'none') ? 'block' : 'none'" class="btn btn-primary">
+        + Add New Patient
+    </button>
+</div>
+
+<!-- Add Patient Form Card -->
+<div class="card" id="newPatientModal" style="margin-bottom: 2rem; display: none;">
+    <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem;">Register New Patient</h3>
+    
+    <form action="{{ url_for('capillaroscopy.patients_list') }}" method="POST">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
+            <div>
+                <label for="name" class="form-label">Full Name *</label>
+                <input type="text" id="name" name="name" class="form-control" placeholder="e.g. Eleanor Vance" required>
+            </div>
+            <div>
+                <label for="patient_code" class="form-label">Patient 7-Digit Code (Optional - Auto-generated if blank)</label>
+                <input type="text" id="patient_code" name="patient_code" class="form-control" placeholder="e.g. 7492041">
+            </div>
+            <div style="grid-column: 1 / -1;">
+                <label for="notes" class="form-label">Clinical Notes</label>
+                <textarea id="notes" name="notes" class="form-control" rows="2" placeholder="Relevant medical history or Raynaud's phenomenon observations..."></textarea>
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1rem;">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('newPatientModal').style.display='none'">Cancel</button>
+            <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1.25rem;">Save Patient</button>
+        </div>
+    </form>
+</div>
+
+<!-- Patient Directory Table -->
+<div class="card">
+    <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem;">
+        {% if current_user.is_admin %}All System Patients (Admin View){% else %}My Patients Directory{% endif %}
+    </h3>
+
+    {% if patients %}
+    <div class="table-responsive">
+        <table class="metrics-table">
+            <thead>
+                <tr>
+                    <th>7-Digit Code</th>
+                    <th>Patient Name</th>
+                    {% if current_user.is_admin %}<th>Evaluator</th>{% endif %}
+                    <th>Clinical Notes (Click to Edit)</th>
+                    <th>Capillaroscopies</th>
+                    <th>Added Date</th>
+                    <th style="text-align: right;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in patients %}
+                <tr>
+                    <td>
+                        <span style="font-weight: 800; font-family: monospace; font-size: 1rem; color: var(--primary); background: var(--primary-light); padding: 2px 8px; border-radius: 6px; border: 1px solid var(--primary-border);">
+                            {{ p.patient_code }}
+                        </span>
+                    </td>
+                    <td><strong>{{ p.name }}</strong></td>
+                    {% if current_user.is_admin %}
+                    <td><span style="font-size: 0.85rem; color: var(--text-muted);">{{ p.doctor.full_name }} ({{ p.doctor.email }})</span></td>
+                    {% endif %}
+                    <td style="max-width: 320px;">
+                        <div id="notes_display_{{ p.id }}" style="cursor: pointer;" onclick="toggleNotesEdit('{{ p.id }}')">
+                            <span style="color: var(--text-main); font-size: 0.875rem;">
+                                {{ p.notes or 'No notes recorded. Click to add notes.' }}
+                            </span>
+                            <span style="font-size: 0.75rem; color: var(--primary); margin-left: 0.4rem; text-decoration: underline;">✏️ Edit</span>
+                        </div>
+
+                        <form id="notes_form_{{ p.id }}" action="{{ url_for('capillaroscopy.edit_patient_notes', patient_id=p.id) }}" method="POST" style="display: none; margin-top: 0.4rem;">
+                            <textarea name="notes" class="form-control" rows="2" style="font-size: 0.85rem; margin-bottom: 0.4rem;">{{ p.notes or '' }}</textarea>
+                            <div style="display: flex; gap: 0.4rem;">
+                                <button type="submit" class="btn btn-primary" style="padding: 0.25rem 0.65rem; font-size: 0.75rem; border-radius: 4px;">Save Notes</button>
+                                <button type="button" class="btn btn-secondary" style="padding: 0.25rem 0.65rem; font-size: 0.75rem; border-radius: 4px;" onclick="toggleNotesEdit('{{ p.id }}')">Cancel</button>
+                            </div>
+                        </form>
+                    </td>
+                    <td><strong>{{ p.capillaroscopies.count() }}</strong> evaluation(s)</td>
+                    <td data-utc="{{ p.created_at.isoformat() }}">{{ p.created_at.strftime('%d %b %Y UTC') }}</td>
+                    <td style="text-align: right;">
+                        <a href="{{ url_for('capillaroscopy.dashboard', patient_id=p.id) }}" class="btn btn-outline-primary" style="padding: 0.3rem 0.75rem; font-size: 0.8rem;">
+                            Evaluations &rarr;
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
+        No patients created yet. Click "+ Add New Patient" above to add your first patient.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleNotesEdit(patientId) {
+    const displayDiv = document.getElementById(`notes_display_${patientId}`);
+    const formElem = document.getElementById(`notes_form_${patientId}`);
+    
+    if (formElem.style.display === 'none') {
+        formElem.style.display = 'block';
+        displayDiv.style.display = 'none';
+    } else {
+        formElem.style.display = 'none';
+        displayDiv.style.display = 'block';
+    }
+}
+</script>
+{% endblock %}

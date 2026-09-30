@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Register — CapillaryMD{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div style="text-align: center; margin-bottom: 1rem;">
+            <span style="background: #FEF2F2; color: #DC2626; border: 1px solid #FCA5A5; font-size: 0.8rem; font-weight: 700; padding: 4px 12px; border-radius: 12px; display: inline-block;">
+                ⚡ Free 5 Credits Included
+            </span>
+        </div>
+        <h2 class="auth-title">Create Account</h2>
+        <p class="auth-subtitle">Register to start performing automated capillaroscopy analyses</p>
+
+        <form action="{{ url_for('auth.register') }}" method="POST">
+            <div class="form-group">
+                <label for="full_name" class="form-label">Full Name *</label>
+                <input type="text" id="full_name" name="full_name" class="form-control" placeholder="e.g. Sarah Johnson" required autofocus>
+            </div>
+
+            <div class="form-group">
+                <label for="email" class="form-label">Email Address *</label>
+                <input type="email" id="email" name="email" class="form-control" placeholder="s.johnson@medical.com" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password" class="form-label">Password *</label>
+                <input type="password" id="password" name="password" class="form-control" placeholder="At least 6 characters" minlength="6" required>
+            </div>
+
+            <div class="form-group">
+                <label for="confirm_password" class="form-label">Confirm Password *</label>
+                <input type="password" id="confirm_password" name="confirm_password" class="form-control" placeholder="Re-enter password" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                Create Account & Claim 5 Credits
+            </button>
+        </form>
+
+        <div style="text-align: center; margin-top: 1.5rem; font-size: 0.875rem; color: var(--text-muted);">
+            Already have an account? <a href="{{ url_for('auth.login') }}" style="font-weight: 600;">Log In</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

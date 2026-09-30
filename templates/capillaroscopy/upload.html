@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Images — CapillaryMD{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+    <a href="{{ url_for('capillaroscopy.dashboard') }}">Home</a> / <span>Upload Images</span>
+</div>
+
+<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+    <h1 style="font-size: 1.8rem; font-weight: 800; display: flex; align-items: center; gap: 0.75rem; margin: 0;">
+        Upload Images
+        <span style="background: #7C3AED; color: white; border-radius: 50%; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700;">⬆</span>
+    </h1>
+
+    <div class="credit-pill" style="font-size: 0.9rem; padding: 0.4rem 0.9rem;">
+        ⚡ Balance: {{ current_user.credits }} Credits
+    </div>
+</div>
+
+<form action="{{ url_for('capillaroscopy.analyze') }}" method="POST" enctype="multipart/form-data" id="uploadForm">
+    
+    <!-- Patient Requirement Card -->
+    <div class="card" style="margin-bottom: 1.5rem; padding: 1.25rem;">
+        <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--primary); margin-bottom: 0.75rem;">
+            Patient Assignment (Required *)
+        </h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
+            <div>
+                <label for="patient_id" class="form-label">Select Existing Patient</label>
+                <select name="patient_id" id="patient_id" class="form-control" onchange="togglePatientInputs()">
+                    <option value="">-- Choose Existing Patient --</option>
+                    {% for p in patients %}
+                    <option value="{{ p.id }}">{{ p.name }} ({{ p.patient_code }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="new_patient_name" class="form-label">Or Enter New Patient Name *</label>
+                <input type="text" id="new_patient_name" name="new_patient_name" class="form-control" placeholder="e.g. Eleanor Vance" oninput="togglePatientInputs()">
+            </div>
+        </div>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">
+            * Every capillaroscopy session must be linked to a patient record. If entering a new name, a 7-digit patient code will automatically be generated.
+        </p>
+    </div>
+
+    <!-- Folder Upload Banner -->
+    <div class="upload-folder-banner" id="wholeFolderBanner">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+        </svg>
+        <div style="flex: 1;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+                <h4 style="font-weight: 700; font-size: 1.05rem; margin-bottom: 0.15rem;">Upload whole folder</h4>
+                <button type="button" onclick="document.getElementById('folderInput').click()" class="btn" style="background: rgba(255,255,255,0.2); color: white; padding: 0.35rem 0.9rem; font-size: 0.85rem; border-radius: 6px;">
+                    Browse Folder
+                </button>
+            </div>
+            <p style="font-size: 0.85rem; opacity: 0.9; margin-top: 0.25rem;">
+                Drag and drop a whole folder here, or click to browse. Images will be placed in their corresponding upload boxes automatically.
+            </p>
+            <div style="margin-top: 0.5rem; background: rgba(0,0,0,0.15); padding: 0.4rem 0.75rem; border-radius: 6px; font-size: 0.8rem;">
+                💡 <strong>Important Folder Naming Rule:</strong> Files inside the folder must contain finger identifiers (e.g. <code>L2</code>, <code>L3</code>, <code>L4</code>, <code>L5</code>, <code>R2</code>, <code>R3</code>, <code>R4</code>, <code>R5</code>) in their filenames or subfolders (e.g., <code>L2_01.jpg</code>). Unmatched files will be rejected.
+            </div>
+        </div>
+        <input type="file" id="folderInput" webkitdirectory directory multiple style="display: none;" onchange="handleFolderUpload(this.files)">
+    </div>
+
+    <!-- Alert Container -->
+    <div id="folderAlertContainer"></div>
+
+    <!-- 8 Finger Upload Grid (A B C slots only, max 3 images per finger) -->
+    <div class="finger-grid">
+        {% for finger in fingers %}
+        <div class="finger-card" id="card_{{ finger }}" ondragover="handleDragOver(event, '{{ finger }}')" ondragleave="handleDragLeave('{{ finger }}')" ondrop="handleDrop(event, '{{ finger }}')">
+            <div>
+                <div class="finger-card-header">
+                    <span class="finger-title">{{ finger }}</span>
+                    
+                    <!-- A B C slot badges (Max 3 images per finger) -->
+                    <div style="display: flex; align-items: center; gap: 0.2rem;">
+                        <button type="button" class="slot-badge" onclick="document.getElementById('input_{{ finger }}').click()" title="Add Image (Max 3)" style="border:none; cursor:pointer;">+</button>
+                        <span class="slot-badge empty" id="slot_{{ finger }}_A">A</span>
+                        <span class="slot-badge empty" id="slot_{{ finger }}_B">B</span>
+                        <span class="slot-badge empty" id="slot_{{ finger }}_C">C</span>
+                    </div>
+                </div>
+
+                <div class="drop-zone-text" id="text_{{ finger }}">
+                    Drag and drop images for finger {{ finger }} here or click to select them (max 3 images)
+                </div>
+
+                <div class="thumb-preview-container" id="thumbs_{{ finger }}"></div>
+            </div>
+
+            <!-- Hidden File Input per Finger -->
+            <input type="file" id="input_{{ finger }}" name="images_{{ finger }}" multiple accept=".jpg,.jpeg,.png" style="display: none;" onchange="handleFileSelect(this, '{{ finger }}')">
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Bottom Action Bar -->
+    <div style="display: flex; align-items: center; justify-content: flex-end; padding: 1.5rem 0; border-top: 1px solid var(--border); margin-top: 1rem; gap: 1rem;">
+        <a href="{{ url_for('capillaroscopy.dashboard') }}" class="btn btn-outline-primary" style="padding: 0.65rem 1.75rem;">
+            Cancel
+        </a>
+
+        <button type="submit" class="btn btn-primary" style="padding: 0.65rem 2.25rem; font-size: 1rem; background: var(--primary);">
+            Analyze (1 Credit)
+        </button>
+    </div>
+
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/upload.js') }}"></script>
+<script>
+function togglePatientInputs() {
+    const patientSelect = document.getElementById('patient_id');
+    const newPatientInput = document.getElementById('new_patient_name');
+    
+    if (patientSelect.value !== '') {
+        newPatientInput.value = '';
+        newPatientInput.disabled = true;
+        newPatientInput.style.backgroundColor = '#F1F5F9';
+        newPatientInput.placeholder = '(Existing patient selected above)';
+    } else {
+        newPatientInput.disabled = false;
+        newPatientInput.style.backgroundColor = '#FFFFFF';
+        newPatientInput.placeholder = 'e.g. Eleanor Vance';
+    }
+}
+</script>
+{% endblock %}

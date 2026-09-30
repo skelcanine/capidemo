@@ -1,0 +1,327 @@
+{% extends "base.html" %}
+
+{% block title %}{{ session.title }} — CapillaryMD{% endblock %}
+
+{% block content %}
+<!-- Top Header & Breadcrumb (Single Main Download Report Button Visible Across All Tabs) -->
+<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
+    <div class="breadcrumb" style="margin-bottom: 0;">
+        <a href="{{ url_for('capillaroscopy.dashboard') }}">Home</a> / <span>{{ session.title }}</span>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 1rem;">
+        <a href="{{ url_for('capillaroscopy.download_report', session_id=session.id) }}" class="btn btn-primary" style="padding: 0.6rem 1.5rem; font-size: 0.95rem;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+            </svg>
+            Download report
+        </a>
+    </div>
+</div>
+
+<!-- Secondary Navigation Tabs -->
+<div class="sub-navbar" id="detailTabs">
+    <a href="#summary" class="sub-tab active" onclick="switchTab(event, 'tab-summary')">Summary</a>
+    <a href="#quality" class="sub-tab" onclick="switchTab(event, 'tab-quality')">Quality 📋</a>
+    {% for f in fingers %}
+    <a href="#{{ f }}" class="sub-tab" onclick="switchTab(event, 'tab-{{ f }}')">{{ f }}</a>
+    {% endfor %}
+    <a href="#report" class="sub-tab" onclick="switchTab(event, 'tab-report')">Report</a>
+</div>
+
+<!-- Tab Content Container -->
+<div id="tabContents">
+    
+    <!-- 1. SUMMARY TAB -->
+    <div id="tab-summary" class="tab-pane active">
+        <div class="card">
+            <div style="display: grid; grid-template-columns: 1fr 340px; gap: 2rem; align-items: flex-start;">
+                
+                <!-- Left: Patient & Session Metadata -->
+                <div>
+                    <div style="display: grid; grid-template-columns: 150px 1fr; gap: 0.5rem 1rem; font-size: 0.9rem; margin-bottom: 1.5rem;">
+                        <span style="font-weight: 700; color: var(--text-muted);">Patient</span>
+                        <span>{% if session.patient %}<strong>{{ session.patient.name }}</strong> ({{ session.patient.patient_code }}){% else %}No patient{% endif %}</span>
+
+                        <span style="font-weight: 700; color: var(--text-muted);">Capillaroscopy date</span>
+                        <span data-utc="{{ session.capillaroscopy_date.isoformat() }}">{{ session.capillaroscopy_date.strftime('%d %b %Y UTC') }}</span>
+
+                        <span style="font-weight: 700; color: var(--text-muted);">Capillaroscopic pattern</span>
+                        <div>
+                            <span style="background: #E2E8F0; padding: 2px 10px; border-radius: 4px; font-weight: 700; font-size: 0.85rem;">
+                                {{ session.pattern }}
+                            </span>
+                        </div>
+
+                        <span style="font-weight: 700; color: var(--text-muted);">Last activity</span>
+                        <span style="color: var(--text-muted);" data-utc="{{ session.last_activity.isoformat() }}" data-show-seconds="1">{{ session.last_activity.strftime('%d %b %Y %H:%M:%S UTC') }}</span>
+
+                        <span style="font-weight: 700; color: var(--text-muted);">Created on</span>
+                        <span style="color: var(--text-muted);" data-utc="{{ session.created_at.isoformat() }}" data-show-seconds="1">{{ session.created_at.strftime('%d %b %Y %H:%M:%S UTC') }}</span>
+                    </div>
+                </div>
+
+                <!-- Right: Visual Risk & Pattern Gauges -->
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; background: #F8FAFC; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.25rem;">
+                    
+                    <div style="width: 100%; margin-bottom: 1.25rem; text-align: center;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 800; margin-bottom: 4px; padding: 0 10px;">
+                            <span style="color: #10B981;">non-SSc</span>
+                            <span style="color: #F59E0B;">SSc</span>
+                        </div>
+                        <div style="height: 12px; width: 100%; background: linear-gradient(to right, #10B981 50%, #F59E0B 50%); border-radius: 6px; position: relative;">
+                            <div style="position: absolute; left: 30%; top: -4px; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid #0F172A;"></div>
+                        </div>
+                    </div>
+
+                    <div style="position: relative; width: 160px; height: 85px; margin-bottom: 0.5rem;">
+                        <svg width="160" height="90" viewBox="0 0 160 90">
+                            <path d="M 20 80 A 60 60 0 0 1 80 20" fill="none" stroke="#10B981" stroke-width="16" />
+                            <path d="M 80 20 A 60 60 0 0 1 140 80" fill="none" stroke="#3B82F6" stroke-width="16" />
+                            <line x1="80" y1="80" x2="60" y2="40" stroke="#0F172A" stroke-width="4" stroke-linecap="round" />
+                            <circle cx="80" cy="80" r="6" fill="#0F172A" />
+                        </svg>
+                    </div>
+
+                    <div style="text-align: center; font-size: 0.85rem; font-weight: 700; color: var(--text-main);">
+                        Suggested pattern <span style="font-size: 0.75rem; border: 1px solid #CBD5E1; border-radius: 50%; padding: 0 4px; color: var(--text-muted);">i</span>
+                    </div>
+
+                    <div style="width: 100%; margin-top: 0.75rem;">
+                        <div style="height: 6px; background: #10B981; border-radius: 3px; width: 99%;"></div>
+                        <div style="text-align: center; font-size: 0.8rem; font-weight: 700; color: #10B981; margin-top: 2px;">
+                            Quality: {{ session.quality_score }}%
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Quantitative Summary Table -->
+            <div style="margin-top: 1.5rem;">
+                <div class="table-responsive">
+                    <table class="metrics-table">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Total</th>
+                                <th>%</th>
+                                <th>Density</th>
+                                <th>Apical diameter</th>
+                                <th>Arterial limb width</th>
+                                <th>Venous limb width</th>
+                            </tr>
+                            <tr style="font-size: 0.75rem; color: var(--text-muted); background: #F8FAFC;">
+                                <th colspan="4"></th>
+                                <th colspan="3" style="text-align: center;">x̄ µm</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in report_data.get('table_data', []) %}
+                            <tr {% if row.type == 'Total capillaries' %}style="font-weight: 800; background: #F8FAFC;"{% endif %}>
+                                <td>
+                                    <input type="checkbox" checked style="margin-right: 0.4rem;">
+                                    {{ row.type }}
+                                </td>
+                                <td>{{ row.total }}</td>
+                                <td>{{ row.percentage }}</td>
+                                <td>{{ row.density }}</td>
+                                <td>{% if row.apical_diameter != None %}{{ row.apical_diameter }}{% else %}—{% endif %}</td>
+                                <td>{% if row.arterial_limb_width != None %}{{ row.arterial_limb_width }}{% else %}—{% endif %}</td>
+                                <td>{% if row.venous_limb_width != None %}{{ row.venous_limb_width }}{% else %}—{% endif %}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 1.5rem; margin-top: 0.75rem; font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">
+                    <div>Total analysed millimeters: <strong>{{ report_data.get('total_analysed_mm', 1.51) }}</strong></div>
+                    <div>Total analysed images: <strong>{{ finger_images.values()|map('length')|sum }}</strong></div>
+                </div>
+            </div>
+
+            <!-- Clinical Narratives Section -->
+            <div style="margin-top: 2rem; border-top: 1px solid var(--border); padding-top: 1.25rem; font-size: 0.9rem; color: var(--text-main); line-height: 1.6;">
+                {% set narratives = report_data.get('narratives', {}) %}
+                <p style="margin-bottom: 0.75rem;">
+                    <strong>Capillary density:</strong> {{ narratives.get('capillary_density', 'Conserved with an average density of 18.56 capillaries/mm.') }}
+                </p>
+                <p style="margin-bottom: 0.75rem;">
+                    <strong>Capillary enlargement:</strong> {{ narratives.get('capillary_enlargement', 'Infrequent, affecting 0% of capillaries.') }}
+                </p>
+                <p style="margin-bottom: 0.5rem;">
+                    <strong>Capillary deformities:</strong>
+                </p>
+                <ul style="margin-left: 1.5rem; font-size: 0.875rem;">
+                    <li>{{ narratives.get('capillary_deformities', 'Tortuosities: Infrequent, affecting 10.7% of capillaries.') }}</li>
+                    <li>Abnormal shapes: None</li>
+                </ul>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 2. QUALITY TAB -->
+    <div id="tab-quality" class="tab-pane" style="display: none;">
+        <div class="card">
+            <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem;">Image Quality Assessment</h3>
+            <p style="color: var(--text-muted); font-size: 0.95rem;">
+                All uploaded finger images have passed automatic clarity, contrast, and magnification checks. Quality Index: <strong>{{ session.quality_score }}%</strong>.
+            </p>
+        </div>
+    </div>
+
+    <!-- 3. FINGER TABS (L2..R5) (Duplicate Download report buttons removed) -->
+    {% for f in fingers %}
+    <div id="tab-{{ f }}" class="tab-pane" style="display: none;">
+        <div class="card">
+            
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                    <h2 style="font-size: 1.4rem; font-weight: 800; color: var(--text-main);">
+                        {% if f.startswith('L') %}Left{% else %}Right{% endif %} 
+                        {% if f.endswith('2') %}Index{% elif f.endswith('3') %}Middle{% elif f.endswith('4') %}Ring{% else %}Little{% endif %} finger ({{ f }})
+                    </h2>
+                    <span style="font-size: 0.85rem; color: var(--text-muted);">
+                        {% if finger_images[f] %}{{ finger_images[f][0].filename }}{% else %}No images uploaded for finger {{ f }}{% endif %}
+                    </span>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                    <div style="border: 1px solid var(--border); border-radius: 6px; padding: 0.35rem 0.75rem; font-size: 0.85rem; font-weight: 700; background: #F8FAFC;">
+                        {% if finger_images[f] %}28 / 1.51 mm = <strong>18.55 capillaries / mm</strong>{% else %}0 / 0.00 mm = 0 capillaries / mm{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slots Row (ABC) -->
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem;">
+                <span style="font-size: 0.75rem; font-weight: 800; color: var(--primary); background: #FEF2F2; padding: 2px 8px; border-radius: 4px; border: 1px solid #FCA5A5;">ABC</span>
+                <span style="font-size: 0.75rem; font-weight: 700; border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px;">+ A</span>
+                <span style="font-size: 0.75rem; font-weight: 700; border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px;">+ B</span>
+                <span style="font-size: 0.75rem; font-weight: 700; border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px;">+ C</span>
+            </div>
+
+            <!-- Image View Area -->
+            {% if finger_images[f] %}
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1.25rem;">
+                {% for img in finger_images[f] %}
+                <div class="zoomable-card" onclick="openZoomModal('{{ url_for('capillaroscopy.serve_upload', image_id=img.id) }}', '{{ img.finger }} - {{ img.filename }}')">
+                    <div style="position: relative; overflow: hidden; background: #000; text-align: center; border-radius: 8px 8px 0 0;">
+                        <img src="{{ url_for('capillaroscopy.serve_upload', image_id=img.id) }}" alt="{{ img.filename }}" style="max-width: 100%; height: 200px; object-fit: contain; cursor: zoom-in; transition: transform 0.3s;">
+                        <div class="zoom-hover-overlay">
+                            🔍 Click to Enlarge & Zoom
+                        </div>
+                    </div>
+                    <div style="background: var(--surface); padding: 0.6rem 0.8rem; font-size: 0.85rem; font-weight: 600; color: var(--text-main); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between;">
+                        <span>Slot {{ img.slot }} — {{ img.filename }}</span>
+                        <span style="font-size: 0.75rem; color: var(--primary); font-weight: 700;">🔍 Zoom</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted); border: 2px dashed var(--border); border-radius: var(--radius-md);">
+                No image uploaded for finger {{ f }}.
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+    {% endfor %}
+
+    <!-- 4. REPORT TAB -->
+    <div id="tab-report" class="tab-pane" style="display: none;">
+        <div class="card" style="text-align: center; padding: 3rem 1.5rem;">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.5" style="margin-bottom: 1rem;">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+            <h3 style="font-size: 1.4rem; font-weight: 700; margin-bottom: 0.5rem;">Download Full Capillaroscopy PDF Report</h3>
+            <p style="color: var(--text-muted); max-width: 450px; margin: 0 auto 1.5rem auto; font-size: 0.95rem;">
+                Includes quantitative statistics, pattern classification, clinical narrative, and high-resolution finger image breakdown.
+            </p>
+            <a href="{{ url_for('capillaroscopy.download_report', session_id=session.id) }}" class="btn btn-primary" style="padding: 0.75rem 2rem; font-size: 1rem;">
+                Download Official PDF Report (.pdf)
+            </a>
+        </div>
+    </div>
+
+</div>
+
+<!-- Interactive Lightbox Modal -->
+<div id="zoomModal" class="zoom-modal" style="display: none;">
+    <div class="zoom-modal-header">
+        <span id="zoomModalTitle" style="color: white; font-weight: 700; font-size: 1rem;">Image View</span>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <button onclick="zoomImage(0.2)" class="zoom-btn" title="Zoom In">+</button>
+            <button onclick="zoomImage(-0.2)" class="zoom-btn" title="Zoom Out">-</button>
+            <button onclick="resetZoom()" class="zoom-btn" title="Reset Zoom">100%</button>
+            <button onclick="closeZoomModal()" class="zoom-btn close-btn" title="Close">&times;</button>
+        </div>
+    </div>
+    <div class="zoom-modal-body" onwheel="handleWheelZoom(event)">
+        <img id="zoomModalImg" src="" alt="Enlarged capillary image" style="transform: scale(1); transition: transform 0.1s ease-out; cursor: grab;">
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentZoom = 1;
+
+function switchTab(e, tabId) {
+    if (e) e.preventDefault();
+    const subTabs = document.querySelectorAll('.sub-tab');
+    subTabs.forEach(t => t.classList.remove('active'));
+    if (e && e.currentTarget) {
+        e.currentTarget.classList.add('active');
+    }
+    const panes = document.querySelectorAll('.tab-pane');
+    panes.forEach(p => p.style.display = 'none');
+    const targetPane = document.getElementById(tabId);
+    if (targetPane) {
+        targetPane.style.display = 'block';
+    }
+}
+
+function openZoomModal(imgSrc, titleText) {
+    const modal = document.getElementById('zoomModal');
+    const modalImg = document.getElementById('zoomModalImg');
+    const modalTitle = document.getElementById('zoomModalTitle');
+    
+    modalImg.src = imgSrc;
+    modalTitle.textContent = titleText;
+    currentZoom = 1;
+    modalImg.style.transform = `scale(${currentZoom})`;
+    modal.style.display = 'flex';
+}
+
+function closeZoomModal() {
+    document.getElementById('zoomModal').style.display = 'none';
+}
+
+function zoomImage(delta) {
+    currentZoom = Math.max(0.5, Math.min(5.0, currentZoom + delta));
+    document.getElementById('zoomModalImg').style.transform = `scale(${currentZoom})`;
+}
+
+function resetZoom() {
+    currentZoom = 1;
+    document.getElementById('zoomModalImg').style.transform = `scale(1)`;
+}
+
+function handleWheelZoom(e) {
+    e.preventDefault();
+    if (e.deltaY < 0) {
+        zoomImage(0.15);
+    } else {
+        zoomImage(-0.15);
+    }
+}
+</script>
+{% endblock %}

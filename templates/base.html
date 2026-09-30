@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Capillary Analysis & Detection System{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <a href="{{ url_for('capillaroscopy.dashboard') }}" class="nav-brand">
+            <svg viewBox="0 0 24 24">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>
+            CapillaryMD
+        </a>
+
+        {% if current_user.is_authenticated %}
+        <ul class="nav-menu">
+            <li>
+                <a href="{{ url_for('capillaroscopy.dashboard') }}" class="nav-link {% if request.endpoint == 'capillaroscopy.dashboard' %}active{% endif %}">
+                    Capillaroscopies
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('capillaroscopy.patients_list') }}" class="nav-link {% if request.endpoint == 'capillaroscopy.patients_list' %}active{% endif %}">
+                    Patients
+                </a>
+            </li>
+            {% if current_user.is_admin %}
+            <li>
+                <a href="{{ url_for('admin.dashboard') }}" class="nav-link {% if 'admin' in request.endpoint %}active{% endif %}">
+                    Admin Dashboard
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <div class="credit-pill" title="1 Credit = 1 Whole Analysis">
+                ⚡ {{ current_user.credits }} Credits
+            </div>
+
+            <div class="user-badge">
+                <span style="font-weight: 600;">{{ current_user.email }}</span>
+                {% if current_user.is_admin %}<span style="font-size: 0.75rem; background: #DC2626; color: white; padding: 2px 6px; border-radius: 4px; font-weight: 700;">ADMIN</span>{% endif %}
+                <a href="{{ url_for('auth.logout') }}" style="color: var(--text-muted); margin-left: 0.5rem;" title="Logout">
+                    Logout
+                </a>
+            </div>
+        </div>
+        {% else %}
+        <div>
+            <a href="{{ url_for('auth.login') }}" class="btn btn-secondary" style="margin-right: 0.5rem;">Log In</a>
+            <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Register</a>
+        </div>
+        {% endif %}
+    </nav>
+
+    <!-- Container -->
+    <div class="container">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="flash-messages">
+              {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">
+                    <span>{{ message }}</span>
+                    <button onclick="this.parentElement.remove()" style="background:none; border:none; cursor:pointer; font-weight:bold; font-size:1.1rem; color:inherit;">&times;</button>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

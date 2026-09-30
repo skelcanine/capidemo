@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard — CapillaryMD{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+    <h1 style="font-size: 1.8rem; font-weight: 800; color: var(--text-main);">Admin Dashboard</h1>
+    <p style="color: var(--text-muted);">Overview of system users, patient counts, uploaded images, and credit balances.</p>
+</div>
+
+<!-- Admin Statistics Overview Cards -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 2rem;">
+    <div class="card" style="border-left: 4px solid var(--primary); margin-bottom: 0;">
+        <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">TOTAL USERS</span>
+        <h2 style="font-size: 2.2rem; font-weight: 800; color: var(--text-main); margin-top: 0.2rem;">{{ total_users }}</h2>
+    </div>
+    <div class="card" style="border-left: 4px solid #3B82F6; margin-bottom: 0;">
+        <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">TOTAL PATIENTS</span>
+        <h2 style="font-size: 2.2rem; font-weight: 800; color: var(--text-main); margin-top: 0.2rem;">{{ total_patients }}</h2>
+    </div>
+    <div class="card" style="border-left: 4px solid #10B981; margin-bottom: 0;">
+        <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">TOTAL ANALYSES</span>
+        <h2 style="font-size: 2.2rem; font-weight: 800; color: var(--text-main); margin-top: 0.2rem;">{{ total_sessions }}</h2>
+    </div>
+    <div class="card" style="border-left: 4px solid #7C3AED; margin-bottom: 0;">
+        <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">IMAGES UPLOADED</span>
+        <h2 style="font-size: 2.2rem; font-weight: 800; color: var(--text-main); margin-top: 0.2rem;">{{ total_images }}</h2>
+    </div>
+</div>
+
+<!-- User Management Table -->
+<div class="card">
+    <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem;">Registered System Users</h3>
+
+    <div class="table-responsive">
+        <table class="metrics-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Full Name</th>
+                    <th>Email Address</th>
+                    <th>Role</th>
+                    <th>Patients</th>
+                    <th>Images Uploaded</th>
+                    <th>Credits Available</th>
+                    <th>Joined Date</th>
+                    <th style="text-align: center;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in user_stats %}
+                <tr>
+                    <td><span style="font-size: 0.8rem; font-family: monospace; color: var(--text-muted);">{{ item.user.id[:8] }}...</span></td>
+                    <td>
+                        <strong>{{ item.user.full_name }}</strong>
+                    </td>
+                    <td>{{ item.user.email }}</td>
+                    <td>
+                        {% if item.user.role == 'admin' %}
+                            <span style="background: #FCA5A5; color: #991B1B; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem;">ADMIN</span>
+                        {% else %}
+                            <span style="background: #E2E8F0; color: #334155; padding: 2px 8px; border-radius: 4px; font-weight: 600; font-size: 0.75rem;">USER</span>
+                        {% endif %}
+                    </td>
+                    <td><strong>{{ item.patient_count }}</strong> patients</td>
+                    <td><strong>{{ item.image_count }}</strong> images</td>
+                    <td>
+                        <span style="font-weight: 800; font-size: 1rem; color: var(--primary);">
+                            ⚡ {{ item.user.credits }}
+                        </span>
+                    </td>
+                    <td data-utc="{{ item.user.created_at.isoformat() }}" data-show-seconds="1">{{ item.user.created_at.strftime('%d %b %Y %H:%M UTC') }}</td>
+                    <td style="text-align: center;">
+                        <form action="{{ url_for('admin.give_credit') }}" method="POST" style="display: flex; gap: 0.4rem; justify-content: center; align-items: center;">
+                            <input type="hidden" name="user_id" value="{{ item.user.id }}">
+                            <input type="number" name="credit_amount" value="5" min="1" max="500" style="width: 65px; padding: 0.3rem; border: 1px solid var(--border); border-radius: 4px; text-align: center;">
+                            <button type="submit" class="btn btn-primary" style="padding: 0.3rem 0.75rem; font-size: 0.8rem; border-radius: 6px;">
+                                + Add Credit
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
