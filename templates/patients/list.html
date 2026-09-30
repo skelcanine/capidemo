@@ -75,7 +75,7 @@
                     </td>
                     <td><strong>{{ p.name }}</strong></td>
                     {% if current_user.is_admin %}
-                    <td><span style="font-size: 0.85rem; color: var(--text-muted);">{{ p.doctor.full_name }} ({{ p.doctor.email }})</span></td>
+                    <td><span style="font-size: 0.85rem; color: var(--text-muted);">{{ p.user.full_name }} ({{ p.user.email }})</span></td>
                     {% endif %}
                     <td style="max-width: 320px;">
                         <div id="notes_display_{{ p.id }}" style="cursor: pointer;" onclick="toggleNotesEdit('{{ p.id }}')">

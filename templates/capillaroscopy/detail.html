@@ -3,7 +3,7 @@
 {% block title %}{{ session.title }} — CapillaryMD{% endblock %}
 
 {% block content %}
-<!-- Top Header & Breadcrumb (Single Main Download Report Button Visible Across All Tabs) -->
+<!-- Top Header & Breadcrumb (Single Main Download Report Button) -->
 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
     <div class="breadcrumb" style="margin-bottom: 0;">
         <a href="{{ url_for('capillaroscopy.dashboard') }}">Home</a> / <span>{{ session.title }}</span>
@@ -37,7 +37,6 @@
         <div class="card">
             <div style="display: grid; grid-template-columns: 1fr 340px; gap: 2rem; align-items: flex-start;">
                 
-                <!-- Left: Patient & Session Metadata -->
                 <div>
                     <div style="display: grid; grid-template-columns: 150px 1fr; gap: 0.5rem 1rem; font-size: 0.9rem; margin-bottom: 1.5rem;">
                         <span style="font-weight: 700; color: var(--text-muted);">Patient</span>
@@ -61,9 +60,7 @@
                     </div>
                 </div>
 
-                <!-- Right: Visual Risk & Pattern Gauges -->
                 <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; background: #F8FAFC; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.25rem;">
-                    
                     <div style="width: 100%; margin-bottom: 1.25rem; text-align: center;">
                         <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 800; margin-bottom: 4px; padding: 0 10px;">
                             <span style="color: #10B981;">non-SSc</span>
@@ -93,11 +90,9 @@
                             Quality: {{ session.quality_score }}%
                         </div>
                     </div>
-
                 </div>
             </div>
 
-            <!-- Quantitative Summary Table -->
             <div style="margin-top: 1.5rem;">
                 <div class="table-responsive">
                     <table class="metrics-table">
@@ -141,7 +136,6 @@
                 </div>
             </div>
 
-            <!-- Clinical Narratives Section -->
             <div style="margin-top: 2rem; border-top: 1px solid var(--border); padding-top: 1.25rem; font-size: 0.9rem; color: var(--text-main); line-height: 1.6;">
                 {% set narratives = report_data.get('narratives', {}) %}
                 <p style="margin-bottom: 0.75rem;">
@@ -158,7 +152,6 @@
                     <li>Abnormal shapes: None</li>
                 </ul>
             </div>
-
         </div>
     </div>
 
@@ -172,7 +165,7 @@
         </div>
     </div>
 
-    <!-- 3. FINGER TABS (L2..R5) (Duplicate Download report buttons removed) -->
+    <!-- 3. FINGER TABS (L2..R5) (Slot Highlighting A, B, C & ABC) -->
     {% for f in fingers %}
     <div id="tab-{{ f }}" class="tab-pane" style="display: none;">
         <div class="card">
@@ -195,28 +188,32 @@
                 </div>
             </div>
 
-            <!-- Slots Row (ABC) -->
+            <!-- Slots Row: Highlights specific section A, B, or C or ABC -->
+            {% set slots_set = finger_slots_uploaded[f] %}
             <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem;">
-                <span style="font-size: 0.75rem; font-weight: 800; color: var(--primary); background: #FEF2F2; padding: 2px 8px; border-radius: 4px; border: 1px solid #FCA5A5;">ABC</span>
-                <span style="font-size: 0.75rem; font-weight: 700; border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px;">+ A</span>
-                <span style="font-size: 0.75rem; font-weight: 700; border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px;">+ B</span>
-                <span style="font-size: 0.75rem; font-weight: 700; border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px;">+ C</span>
+                <!-- Combined ABC highlight tag if any images uploaded -->
+                <span class="slot-badge-lg {% if slots_set %}active-abc{% else %}empty-abc{% endif %}">ABC</span>
+                
+                <!-- Individual Section Highlighting A, B, C -->
+                <span class="slot-badge-item {% if 'A' in slots_set %}active-slot{% endif %}">A Section</span>
+                <span class="slot-badge-item {% if 'B' in slots_set %}active-slot{% endif %}">B Section</span>
+                <span class="slot-badge-item {% if 'C' in slots_set %}active-slot{% endif %}">C Section</span>
             </div>
 
             <!-- Image View Area -->
             {% if finger_images[f] %}
             <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1.25rem;">
                 {% for img in finger_images[f] %}
-                <div class="zoomable-card" onclick="openZoomModal('{{ url_for('capillaroscopy.serve_upload', image_id=img.id) }}', '{{ img.finger }} - {{ img.filename }}')">
+                <div class="zoomable-card" onclick="openZoomModal('{{ url_for('capillaroscopy.serve_upload', image_id=img.id) }}', '{{ img.finger }} Slot {{ img.slot }} - {{ img.filename }}')">
                     <div style="position: relative; overflow: hidden; background: #000; text-align: center; border-radius: 8px 8px 0 0;">
                         <img src="{{ url_for('capillaroscopy.serve_upload', image_id=img.id) }}" alt="{{ img.filename }}" style="max-width: 100%; height: 200px; object-fit: contain; cursor: zoom-in; transition: transform 0.3s;">
                         <div class="zoom-hover-overlay">
-                            🔍 Click to Enlarge & Zoom
+                            🔍 Click to Enlarge, Zoom & Drag-Pan
                         </div>
                     </div>
                     <div style="background: var(--surface); padding: 0.6rem 0.8rem; font-size: 0.85rem; font-weight: 600; color: var(--text-main); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between;">
-                        <span>Slot {{ img.slot }} — {{ img.filename }}</span>
-                        <span style="font-size: 0.75rem; color: var(--primary); font-weight: 700;">🔍 Zoom</span>
+                        <span><strong style="color: var(--primary);">Slot {{ img.slot }}</strong> — {{ img.filename }}</span>
+                        <span style="font-size: 0.75rem; color: var(--primary); font-weight: 700;">🔍 Zoom & Pan</span>
                     </div>
                 </div>
                 {% endfor %}
@@ -252,19 +249,19 @@
 
 </div>
 
-<!-- Interactive Lightbox Modal -->
+<!-- Interactive Lightbox Modal with Zoom & Drag-to-Pan Feature -->
 <div id="zoomModal" class="zoom-modal" style="display: none;">
     <div class="zoom-modal-header">
         <span id="zoomModalTitle" style="color: white; font-weight: 700; font-size: 1rem;">Image View</span>
         <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <button onclick="zoomImage(0.2)" class="zoom-btn" title="Zoom In">+</button>
-            <button onclick="zoomImage(-0.2)" class="zoom-btn" title="Zoom Out">-</button>
+            <button onclick="zoomImage(0.25)" class="zoom-btn" title="Zoom In">+</button>
+            <button onclick="zoomImage(-0.25)" class="zoom-btn" title="Zoom Out">-</button>
             <button onclick="resetZoom()" class="zoom-btn" title="Reset Zoom">100%</button>
             <button onclick="closeZoomModal()" class="zoom-btn close-btn" title="Close">&times;</button>
         </div>
     </div>
-    <div class="zoom-modal-body" onwheel="handleWheelZoom(event)">
-        <img id="zoomModalImg" src="" alt="Enlarged capillary image" style="transform: scale(1); transition: transform 0.1s ease-out; cursor: grab;">
+    <div class="zoom-modal-body" id="modalBody" onwheel="handleWheelZoom(event)">
+        <img id="zoomModalImg" src="" alt="Enlarged capillary image" style="transform: translate(0px, 0px) scale(1); cursor: grab; user-select: none;">
     </div>
 </div>
 
@@ -273,6 +270,9 @@
 {% block scripts %}
 <script>
 let currentZoom = 1;
+let isDragging = false;
+let startX = 0, startY = 0;
+let panX = 0, panY = 0;
 
 function switchTab(e, tabId) {
     if (e) e.preventDefault();
@@ -289,6 +289,7 @@ function switchTab(e, tabId) {
     }
 }
 
+// Lightbox Zoom & Panning Logic
 function openZoomModal(imgSrc, titleText) {
     const modal = document.getElementById('zoomModal');
     const modalImg = document.getElementById('zoomModalImg');
@@ -297,7 +298,9 @@ function openZoomModal(imgSrc, titleText) {
     modalImg.src = imgSrc;
     modalTitle.textContent = titleText;
     currentZoom = 1;
-    modalImg.style.transform = `scale(${currentZoom})`;
+    panX = 0;
+    panY = 0;
+    updateTransform();
     modal.style.display = 'flex';
 }
 
@@ -306,22 +309,85 @@ function closeZoomModal() {
 }
 
 function zoomImage(delta) {
-    currentZoom = Math.max(0.5, Math.min(5.0, currentZoom + delta));
-    document.getElementById('zoomModalImg').style.transform = `scale(${currentZoom})`;
+    currentZoom = Math.max(0.5, Math.min(6.0, currentZoom + delta));
+    if (currentZoom === 1) {
+        panX = 0;
+        panY = 0;
+    }
+    updateTransform();
 }
 
 function resetZoom() {
     currentZoom = 1;
-    document.getElementById('zoomModalImg').style.transform = `scale(1)`;
+    panX = 0;
+    panY = 0;
+    updateTransform();
+}
+
+function updateTransform() {
+    const modalImg = document.getElementById('zoomModalImg');
+    if (modalImg) {
+        modalImg.style.transform = `translate(${panX}px, ${panY}px) scale(${currentZoom})`;
+    }
 }
 
 function handleWheelZoom(e) {
     e.preventDefault();
-    if (e.deltaY < 0) {
-        zoomImage(0.15);
-    } else {
-        zoomImage(-0.15);
-    }
+    const delta = e.deltaY < 0 ? 0.2 : -0.2;
+    zoomImage(delta);
 }
+
+// Mouse & Touch Drag-to-Pan Logic (Strictly active ONLY while mouse button is pressed)
+const imgElem = document.getElementById('zoomModalImg');
+
+imgElem.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    isDragging = true;
+    startX = e.clientX - panX;
+    startY = e.clientY - panY;
+    imgElem.style.cursor = 'grabbing';
+});
+
+window.addEventListener('mousemove', (e) => {
+    if (!isDragging || e.buttons === 0) {
+        if (isDragging) {
+            isDragging = false;
+            if (imgElem) imgElem.style.cursor = 'grab';
+        }
+        return;
+    }
+    e.preventDefault();
+    panX = e.clientX - startX;
+    panY = e.clientY - startY;
+    updateTransform();
+});
+
+function stopDragging() {
+    isDragging = false;
+    if (imgElem) imgElem.style.cursor = 'grab';
+}
+
+window.addEventListener('mouseup', stopDragging);
+window.addEventListener('mouseleave', stopDragging);
+
+// Touch support for mobile devices
+imgElem.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) {
+        isDragging = true;
+        startX = e.touches[0].clientX - panX;
+        startY = e.touches[0].clientY - panY;
+    }
+});
+
+window.addEventListener('touchmove', (e) => {
+    if (!isDragging || e.touches.length !== 1) return;
+    panX = e.touches[0].clientX - startX;
+    panY = e.touches[0].clientY - startY;
+    updateTransform();
+});
+
+window.addEventListener('touchend', stopDragging);
+window.addEventListener('touchcancel', stopDragging);
 </script>
 {% endblock %}

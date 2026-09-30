@@ -61,7 +61,7 @@
                 Drag and drop a whole folder here, or click to browse. Images will be placed in their corresponding upload boxes automatically.
             </p>
             <div style="margin-top: 0.5rem; background: rgba(0,0,0,0.15); padding: 0.4rem 0.75rem; border-radius: 6px; font-size: 0.8rem;">
-                💡 <strong>Important Folder Naming Rule:</strong> Files inside the folder must contain finger identifiers (e.g. <code>L2</code>, <code>L3</code>, <code>L4</code>, <code>L5</code>, <code>R2</code>, <code>R3</code>, <code>R4</code>, <code>R5</code>) in their filenames or subfolders (e.g., <code>L2_01.jpg</code>). Unmatched files will be rejected.
+                💡 <strong>Folder Naming Rule:</strong> Files must include finger identifiers (e.g. <code>L2</code>, <code>L3</code>, <code>L4</code>, <code>L5</code>, <code>R2</code>, <code>R3</code>, <code>R4</code>, <code>R5</code>) in their filenames or subfolders. Unmatched files will be rejected.
             </div>
         </div>
         <input type="file" id="folderInput" webkitdirectory directory multiple style="display: none;" onchange="handleFolderUpload(this.files)">
@@ -70,7 +70,7 @@
     <!-- Alert Container -->
     <div id="folderAlertContainer"></div>
 
-    <!-- 8 Finger Upload Grid (A B C slots only, max 3 images per finger) -->
+    <!-- 8 Finger Upload Grid (A, B, C slot buttons) -->
     <div class="finger-grid">
         {% for finger in fingers %}
         <div class="finger-card" id="card_{{ finger }}" ondragover="handleDragOver(event, '{{ finger }}')" ondragleave="handleDragLeave('{{ finger }}')" ondrop="handleDrop(event, '{{ finger }}')">
@@ -78,24 +78,28 @@
                 <div class="finger-card-header">
                     <span class="finger-title">{{ finger }}</span>
                     
-                    <!-- A B C slot badges (Max 3 images per finger) -->
-                    <div style="display: flex; align-items: center; gap: 0.2rem;">
-                        <button type="button" class="slot-badge" onclick="document.getElementById('input_{{ finger }}').click()" title="Add Image (Max 3)" style="border:none; cursor:pointer;">+</button>
-                        <span class="slot-badge empty" id="slot_{{ finger }}_A">A</span>
-                        <span class="slot-badge empty" id="slot_{{ finger }}_B">B</span>
-                        <span class="slot-badge empty" id="slot_{{ finger }}_C">C</span>
+                    <!-- Interactive Slot Badges (+ A B C) -->
+                    <div style="display: flex; align-items: center; gap: 0.3rem;">
+                        <button type="button" class="slot-badge" onclick="clickSlot('{{ finger }}', 'PLUS')" title="Upload image to next available slot">+</button>
+                        <button type="button" class="slot-badge empty" id="slot_{{ finger }}_A" onclick="clickSlot('{{ finger }}', 'A')" title="Upload image directly for Slot A">A</button>
+                        <button type="button" class="slot-badge empty" id="slot_{{ finger }}_B" onclick="clickSlot('{{ finger }}', 'B')" title="Upload image directly for Slot B">B</button>
+                        <button type="button" class="slot-badge empty" id="slot_{{ finger }}_C" onclick="clickSlot('{{ finger }}', 'C')" title="Upload image directly for Slot C">C</button>
                     </div>
                 </div>
 
                 <div class="drop-zone-text" id="text_{{ finger }}">
-                    Drag and drop images for finger {{ finger }} here or click to select them (max 3 images)
+                    Drag & drop or click <strong>+</strong>, <strong>A</strong>, <strong>B</strong>, or <strong>C</strong> to select images (max 3 images)
                 </div>
 
+                <!-- Thumbnails with Remove × buttons -->
                 <div class="thumb-preview-container" id="thumbs_{{ finger }}"></div>
             </div>
 
-            <!-- Hidden File Input per Finger -->
-            <input type="file" id="input_{{ finger }}" name="images_{{ finger }}" multiple accept=".jpg,.jpeg,.png" style="display: none;" onchange="handleFileSelect(this, '{{ finger }}')">
+            <!-- Hidden File Inputs per Slot (A, B, C, PLUS) -->
+            <input type="file" id="input_{{ finger }}_A" name="images_{{ finger }}_A" accept=".jpg,.jpeg,.png" style="display: none;" onchange="handleSlotFileSelect(this, '{{ finger }}', 'A')">
+            <input type="file" id="input_{{ finger }}_B" name="images_{{ finger }}_B" accept=".jpg,.jpeg,.png" style="display: none;" onchange="handleSlotFileSelect(this, '{{ finger }}', 'B')">
+            <input type="file" id="input_{{ finger }}_C" name="images_{{ finger }}_C" accept=".jpg,.jpeg,.png" style="display: none;" onchange="handleSlotFileSelect(this, '{{ finger }}', 'C')">
+            <input type="file" id="input_{{ finger }}_PLUS" name="images_{{ finger }}_PLUS" multiple accept=".jpg,.jpeg,.png" style="display: none;" onchange="handlePlusFileSelect(this, '{{ finger }}')">
         </div>
         {% endfor %}
     </div>

@@ -15,9 +15,6 @@ FINGERS = ['L2', 'L3', 'L4', 'L5', 'R2', 'R3', 'R4', 'R5']
 SLOTS = ['A', 'B', 'C']
 
 def generate_unique_7digit_patient_code():
-    """
-    Generates a 7-digit patient code (e.g. P-7492014) unique SYSTEM-WIDE across all patients.
-    """
     while True:
         num = random.randint(1000000, 9999999)
         code = f"P-{num}"
@@ -67,7 +64,6 @@ def patients_list():
             else:
                 if not patient_code.startswith('P-'):
                     patient_code = f"P-{patient_code}"
-                # System-wide uniqueness check
                 existing = Patient.query.filter_by(patient_code=patient_code).first()
                 if existing:
                     flash(f'Patient code "{patient_code}" is already in use in the system. Generated a new unique code.', 'info')
@@ -142,7 +138,7 @@ def analyze():
             patient = Patient.query.filter_by(id=patient_id, user_id=current_user.id).first()
             
     if not patient and new_patient_name:
-        code = generate_unique_7digit_patient_code() # System-wide unique 7-digit code
+        code = generate_unique_7digit_patient_code()
         patient = Patient(user_id=current_user.id, name=new_patient_name, patient_code=code)
         db.session.add(patient)
         db.session.flush()
@@ -177,9 +173,28 @@ def analyze():
     saved_images_count = 0
     
     for finger in FINGERS:
-        files = request.files.getlist(f'images_{finger}')
-        for idx, file in enumerate(files[:3]):
+        # Check files per slot (A, B, C) or general upload
+        finger_files_to_save = {} # slot -> FileStorage
+        
+        for slot in SLOTS:
+            files_slot = request.files.getlist(f'images_{finger}_{slot}')
+            if files_slot and files_slot[0] and files_slot[0].filename:
+                finger_files_to_save[slot] = files_slot[0]
+                
+        # Check general PLUS input or legacy images input
+        files_plus = request.files.getlist(f'images_{finger}_PLUS') + request.files.getlist(f'images_{finger}')
+        for file in files_plus:
             if file and file.filename:
+                # Find first unoccupied slot A, B, or C
+                for s in SLOTS:
+                    if s not in finger_files_to_save:
+                        finger_files_to_save[s] = file
+                        break
+                        
+        # Save up to 3 slot files (A, B, C) to disk & DB
+        for slot_name in SLOTS:
+            if slot_name in finger_files_to_save:
+                file = finger_files_to_save[slot_name]
                 filename = sanitize_user_filename(file.filename)
                 
                 if not allowed_file(filename):
@@ -190,7 +205,6 @@ def analyze():
                     flash(f'File "{filename}" rejected: File content header is not a valid image.', 'danger')
                     continue
                     
-                slot_name = SLOTS[idx] if idx < len(SLOTS) else f'S{idx}'
                 save_filename = f"{finger}_{slot_name}_{filename}"
                 save_path = os.path.join(upload_dir, save_filename)
                 
@@ -227,9 +241,12 @@ def detail(session_id):
     images = CapillaryImage.query.filter_by(capillaroscopy_id=cap_session.id).all()
     
     finger_images = {f: [] for f in FINGERS}
+    finger_slots_uploaded = {f: set() for f in FINGERS}
+    
     for img in images:
         if img.finger in finger_images:
             finger_images[img.finger].append(img)
+            finger_slots_uploaded[img.finger].add(img.slot)
             
     report_data = {}
     if cap_session.report_data_json:
@@ -242,6 +259,7 @@ def detail(session_id):
         'capillaroscopy/detail.html',
         session=cap_session,
         finger_images=finger_images,
+        finger_slots_uploaded=finger_slots_uploaded,
         report_data=report_data,
         fingers=FINGERS
     )

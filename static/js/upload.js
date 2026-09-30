@@ -1,4 +1,19 @@
-// Client-Side Drag & Drop and Preview Logic for Capillaroscopy Uploads
+// Interactive Client-Side Drag & Drop, Slot Selection (A, B, C), and Image Removal Logic
+
+const fingerSlotState = {};
+const FINGERS = ['L2', 'L3', 'L4', 'L5', 'R2', 'R3', 'R4', 'R5'];
+
+FINGERS.forEach(f => {
+    fingerSlotState[f] = { A: null, B: null, C: null };
+});
+
+function clickSlot(finger, slot) {
+    const inputId = `input_${finger}_${slot}`;
+    const input = document.getElementById(inputId);
+    if (input) {
+        input.click();
+    }
+}
 
 function handleDragOver(e, finger) {
     e.preventDefault();
@@ -17,73 +32,133 @@ function handleDrop(e, finger) {
     e.stopPropagation();
     handleDragLeave(finger);
 
-    const dt = e.dataTransfer;
-    const files = dt.files;
+    const files = e.dataTransfer.files;
     if (files && files.length > 0) {
-        const fileInput = document.getElementById(`input_${finger}`);
-        if (fileInput) {
-            const dataTransfer = new DataTransfer();
-            for (let i = 0; i < Math.min(files.length, 3); i++) {
-                dataTransfer.items.add(files[i]);
-            }
-            fileInput.files = dataTransfer.files;
-            updateThumbnails(finger, fileInput.files);
+        addFilesToFinger(finger, files, false);
+    }
+}
+
+function handleSlotFileSelect(input, finger, slot) {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        fingerSlotState[finger][slot] = { file: file, isPlus: false };
+        renderFingerState(finger);
+    }
+}
+
+function handlePlusFileSelect(input, finger) {
+    if (input.files && input.files.length > 0) {
+        addFilesToFinger(finger, input.files, true);
+    }
+}
+
+function addFilesToFinger(finger, files, isPlus) {
+    const slots = ['A', 'B', 'C'];
+    let fileIdx = 0;
+
+    for (let i = 0; i < slots.length && fileIdx < files.length; i++) {
+        const slot = slots[i];
+        if (!fingerSlotState[finger][slot]) {
+            fingerSlotState[finger][slot] = { file: files[fileIdx], isPlus: isPlus };
+            fileIdx++;
         }
     }
+    renderFingerState(finger);
 }
 
-function handleFileSelect(input, finger) {
-    if (input.files && input.files.length > 0) {
-        updateThumbnails(finger, input.files);
-    }
+function removeSlotImage(finger, slot, event) {
+    if (event) event.stopPropagation();
+
+    fingerSlotState[finger][slot] = null;
+
+    const inputSlot = document.getElementById(`input_${finger}_${slot}`);
+    if (inputSlot) inputSlot.value = '';
+
+    renderFingerState(finger);
 }
 
-function updateThumbnails(finger, files) {
+function renderFingerState(finger) {
     const container = document.getElementById(`thumbs_${finger}`);
     const textElem = document.getElementById(`text_${finger}`);
     if (!container) return;
 
     container.innerHTML = '';
     const slots = ['A', 'B', 'C'];
-    
-    // Reset slot badges A, B, C
-    slots.forEach(s => {
-        const badge = document.getElementById(`slot_${finger}_${s}`);
-        if (badge) badge.className = 'slot-badge empty';
+    let loadedCount = 0;
+
+    slots.forEach(slot => {
+        const badge = document.getElementById(`slot_${finger}_${slot}`);
+        const slotData = fingerSlotState[finger][slot];
+
+        if (slotData) {
+            loadedCount++;
+            if (badge) {
+                badge.className = 'slot-badge active';
+                badge.title = `Slot ${slot}: ${slotData.file.name}`;
+            }
+
+            const thumbWrap = document.createElement('div');
+            thumbWrap.className = 'thumb-wrapper';
+
+            const img = document.createElement('img');
+            img.className = 'thumb-preview';
+            img.title = `Slot ${slot} (${slotData.isPlus ? 'Uploaded via +' : 'Specific Slot'}) - ${slotData.file.name}`;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(slotData.file);
+
+            const slotTag = document.createElement('span');
+            slotTag.className = 'thumb-slot-tag';
+            slotTag.innerText = slot;
+
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'thumb-remove-btn';
+            removeBtn.innerHTML = '&times;';
+            removeBtn.title = `Remove image from slot ${slot}`;
+            removeBtn.onclick = function(e) {
+                removeSlotImage(finger, slot, e);
+            };
+
+            thumbWrap.appendChild(img);
+            thumbWrap.appendChild(slotTag);
+            thumbWrap.appendChild(removeBtn);
+            container.appendChild(thumbWrap);
+        } else {
+            if (badge) {
+                badge.className = 'slot-badge empty';
+                badge.title = `Click to add image for Slot ${slot}`;
+            }
+        }
     });
 
-    const count = Math.min(files.length, 3); // Max 3 images per finger
-    if (count > 0 && textElem) {
-        textElem.style.display = 'none';
-    } else if (textElem) {
-        textElem.style.display = 'block';
+    if (textElem) {
+        textElem.style.display = loadedCount > 0 ? 'none' : 'block';
     }
 
-    for (let i = 0; i < count; i++) {
-        const file = files[i];
-        const slotLetter = slots[i];
-        
-        const badge = document.getElementById(`slot_${finger}_${slotLetter}`);
-        if (badge) badge.className = 'slot-badge';
-
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const img = document.createElement('img');
-            img.src = e.target.result;
-            img.className = 'thumb-preview';
-            img.title = file.name;
-            container.appendChild(img);
-        };
-        reader.readAsDataURL(file);
-    }
+    syncFormInputs(finger);
 }
 
-// Whole Folder Upload Parser & Validator
+function syncFormInputs(finger) {
+    const slots = ['A', 'B', 'C'];
+    slots.forEach(slot => {
+        const slotData = fingerSlotState[finger][slot];
+        const input = document.getElementById(`input_${finger}_${slot}`);
+        if (input && slotData) {
+            const dt = new DataTransfer();
+            dt.items.add(slotData.file);
+            input.files = dt.files;
+        } else if (input) {
+            input.files = new DataTransfer().files;
+        }
+    });
+}
+
 function handleFolderUpload(files) {
     const fingers = ['L2', 'L3', 'L4', 'L5', 'R2', 'R3', 'R4', 'R5'];
-    const fingerFilesMap = {};
-    fingers.forEach(f => fingerFilesMap[f] = []);
-
     let totalMatched = 0;
     let totalRejected = 0;
 
@@ -91,25 +166,28 @@ function handleFolderUpload(files) {
         const file = files[i];
         const filename = file.name.toUpperCase();
         const path = file.webkitRelativePath ? file.webkitRelativePath.toUpperCase() : '';
-        
+
         let matched = false;
         for (const f of fingers) {
             if (filename.includes(f) || path.includes(f)) {
-                if (fingerFilesMap[f].length < 3) { // Max 3 images per finger
-                    fingerFilesMap[f].push(file);
-                    totalMatched++;
-                    matched = true;
-                    break;
+                const slots = ['A', 'B', 'C'];
+                for (const s of slots) {
+                    if (!fingerSlotState[f][s]) {
+                        fingerSlotState[f][s] = { file: file, isPlus: true };
+                        totalMatched++;
+                        matched = true;
+                        break;
+                    }
                 }
+                if (matched) break;
             }
         }
-        if (!matched) {
-            totalRejected++;
-        }
+        if (!matched) totalRejected++;
     }
 
+    fingers.forEach(f => renderFingerState(f));
+
     const alertContainer = document.getElementById('folderAlertContainer');
-    
     if (totalMatched === 0) {
         if (alertContainer) {
             alertContainer.innerHTML = `
@@ -124,16 +202,6 @@ function handleFolderUpload(files) {
         }
         return;
     }
-
-    fingers.forEach(f => {
-        const fileInput = document.getElementById(`input_${f}`);
-        if (fileInput) {
-            const dt = new DataTransfer();
-            fingerFilesMap[f].forEach(file => dt.items.add(file));
-            fileInput.files = dt.files;
-            updateThumbnails(f, dt.files);
-        }
-    });
 
     if (alertContainer) {
         alertContainer.innerHTML = `
